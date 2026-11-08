@@ -12,11 +12,16 @@ var commandeEnregistree = null;
 var CHAMPS_INFOS = [
   { id: "student-lastname",  libelle: "votre nom" },
   { id: "student-firstname", libelle: "votre prénom" },
-  { id: "student-level",     libelle: "votre niveau" },
+  { id: "student-level",     libelle: "votre niveau ou statut" },
   { id: "student-filiere",   libelle: "votre filière" },
   { id: "student-phone",     libelle: "votre numéro de téléphone" },
   { id: "student-campus",    libelle: "votre campus" }
 ];
+// Vrai si la personne est enseignant ou personnel administratif (pas de filière)
+function estPersonnel() {
+  var n = document.getElementById("student-level").value;
+  return n === "Enseignant" || n === "Personnel administratif";
+}
 /* ---------- OUTILS ---------- */
 function formaterPrix(n) {
   return n.toLocaleString("fr-FR") + " FCFA";
@@ -47,7 +52,7 @@ function calculerTotal() {
 function afficherMenu() {
   var grille = document.getElementById("menu-grid");
   grille.innerHTML = "";
-  MENU.forEach(function (plat) {
+ MENU.forEach(function (plat) {
     var carte = document.createElement("div");
     carte.className = "dish" + (commandeEnregistree ? " locked" : "");
     carte.setAttribute("role", "button");
@@ -62,7 +67,7 @@ function afficherMenu() {
     img.loading = "lazy";
     img.onerror = function () { img.style.display = "none"; };
     zoneImg.appendChild(img);
-var texte = document.createElement("div");
+   var texte = document.createElement("div");
     texte.className = "dish-text";
     var badge = document.createElement("span");
     badge.className = "badge";
@@ -87,7 +92,7 @@ var texte = document.createElement("div");
         basculerPlat(plat.id);
       }
     });
-    grille.appendChild(carte);
+  grille.appendChild(carte);
   });
 }
 /* ---------- PANIER ---------- */
@@ -130,7 +135,7 @@ function afficherPanier() {
   var vide = document.getElementById("basket-empty");
   var total = document.getElementById("basket-total");
   liste.innerHTML = "";
-if (panier.length === 0) {
+ if (panier.length === 0) {
     vide.hidden = false;
     total.hidden = true;
     return;
@@ -142,7 +147,7 @@ if (panier.length === 0) {
  var nom = document.createElement("span");
     nom.className = "basket-name";
     nom.textContent = plat.nom;
-// Sélecteur de quantité, placé juste avant le prix
+ // Sélecteur de quantité, placé juste avant le prix
     var qty = document.createElement("div");
     qty.className = "qty";
     var moins = creerBoutonQuantite("−", "Retirer un " + plat.nom, function () { changerQuantite(ligne.id, -1); });
@@ -157,15 +162,15 @@ if (panier.length === 0) {
  var prix = document.createElement("span");
     prix.className = "basket-price";
     prix.textContent = formaterPrix(plat.prix * ligne.qte);
-  li.appendChild(nom);
+ li.appendChild(nom);
     li.appendChild(qty);
     li.appendChild(prix);
     liste.appendChild(li);
   });
-total.hidden = false;
+ total.hidden = false;
   total.textContent = "Total : " + formaterPrix(calculerTotal());
 }
-/* ---------- INFORMATIONS ÉTUDIANT ---------- */
+/* ---------- INFORMATIONS ÉTUDIANT / PERSONNEL ---------- */
 function telephoneValide(valeur) {
   // Accepte chiffres, espaces, points, tirets, parenthèses et un "+" initial ; 8 à 15 chiffres
   if (!/^\+?[\d\s.\-()]+$/.test(valeur)) return false;
@@ -180,15 +185,20 @@ function lireInfosEtudiant() {
     var valeur = el.value.trim();
     var invalide = !valeur;
     var libelle = c.libelle;
-    if (c.id === "student-phone" && valeur && !telephoneValide(valeur)) {
+ // La filière n'est pas demandée aux enseignants ni au personnel administratif
+    if (c.id === "student-filiere" && estPersonnel()) {
+      invalide = false;
+      valeur = "";
+    }
+ if (c.id === "student-phone" && valeur && !telephoneValide(valeur)) {
       invalide = true;
       libelle = "un numéro de téléphone valide";
     }
-    el.parentElement.classList.toggle("invalid", invalide);
+ el.parentElement.classList.toggle("invalid", invalide);
     if (invalide) manquants.push(libelle);
     valeurs[c.id] = valeur;
   });
- if (manquants.length > 0) {
+if (manquants.length > 0) {
     var items = manquants.map(function (m) { return "<li>" + m + "</li>"; }).join("");
     afficherMessage("message-save", "error", "Veuillez renseigner :<ul>" + items + "</ul>");
     document.getElementById("infos").scrollIntoView();
@@ -221,13 +231,13 @@ if (panier.length === 0) {
     document.getElementById("menu").scrollIntoView();
     return;
   }
- var infos = lireInfosEtudiant();
+var infos = lireInfosEtudiant();
   if (!infos) return;
  if (VERIFIER_HORAIRES && !commandesOuvertes()) {
     afficherMessage("message-save", "warn", "Les commandes sont fermées pour le moment. Elles sont ouvertes chaque jour de 17h00 à 05h00.");
     return;
   }
-// Ex : "2 x Poulet braisé, 1 x Jus de bissap"
+ // Ex : "2 x Poulet braisé, 1 x Jus de bissap"
   var plats = panier.map(function (ligne) {
     return ligne.qte + " x " + trouverPlat(ligne.id).nom;
   });
@@ -248,8 +258,7 @@ if (panier.length === 0) {
  var bouton = document.getElementById("save-btn");
   bouton.disabled = true;
   bouton.textContent = "Enregistrement...";
-
-  try {
+try {
     await fetch(URL_SHEET, {
       method: "POST",
       mode: "no-cors",
@@ -262,11 +271,11 @@ if (panier.length === 0) {
     bouton.textContent = "Enregistrer ma commande";
     return;
   }
- commandeEnregistree = { reference: reference, total: total, nom: infos.prenom + " " + infos.nom };
+commandeEnregistree = { reference: reference, total: total, nom: infos.prenom + " " + infos.nom };
 verrouillerInfos(true);
   afficherMenu();
   afficherPanier();
- bouton.textContent = "Commande enregistrée ✓";
+bouton.textContent = "Commande enregistrée ✓";
   afficherMessage(
     "message-save",
     "success",
@@ -277,7 +286,7 @@ verrouillerInfos(true);
     "Cliquez maintenant sur « Passer ma commande » pour payer avec Wave.<br>" +
     "<button type=\"button\" class=\"link-btn\" onclick=\"nouvelleCommande()\">Modifier / nouvelle commande</button>"
   );
- document.getElementById("pay-btn").disabled = false;
+document.getElementById("pay-btn").disabled = false;
   document.getElementById("commande").scrollIntoView();
 }
 /* ---------- ÉTAPE 2 : PASSER LA COMMANDE (PAIEMENT WAVE) ---------- */
@@ -287,7 +296,7 @@ function passerCommande() {
     document.getElementById("panier").scrollIntoView();
     return;
   }
- var url = WAVE_LIEN + (WAVE_LIEN.indexOf("?") === -1 ? "?" : "&") + "amount=" + commandeEnregistree.total;
+var url = WAVE_LIEN + (WAVE_LIEN.indexOf("?") === -1 ? "?" : "&") + "amount=" + commandeEnregistree.total;
   afficherMessage(
     "message",
     "success",
@@ -307,7 +316,7 @@ function nouvelleCommande() {
   document.getElementById("pay-btn").disabled = true;
   document.getElementById("message-save").hidden = true;
   document.getElementById("message").hidden = true;
- afficherMenu();
+afficherMenu();
   afficherPanier();
   document.getElementById("menu").scrollIntoView();
 }
