@@ -43,17 +43,19 @@
           <input type="text" id="student-firstname" placeholder="Ex : Yao" autocomplete="given-name">
         </div>
         <div class="field">
-          <label for="student-level">Niveau</label>
+          <label for="student-level">Niveau / Statut</label>
           <select id="student-level">
-            <option value="" disabled selected>Choisir mon niveau</option>
+            <option value="" disabled selected>Choisir mon niveau ou statut</option>
             <option value="Licence 1">Licence 1</option>
             <option value="Licence 2">Licence 2</option>
             <option value="Licence 3">Licence 3</option>
             <option value="Master 1">Master 1</option>
             <option value="Master 2">Master 2</option>
+            <option value="Enseignant">Enseignant</option>
+            <option value="Personnel administratif">Personnel administratif</option>
           </select>
         </div>
-        <div class="field">
+        <div class="field" id="field-filiere">
           <label for="student-filiere">Filière</label>
           <input type="text" id="student-filiere" placeholder="Ex : Sciences Économiques">
         </div>
@@ -104,5 +106,26 @@
 </footer>
 <script src="menu.js"></script>
 <script src="script.js"></script>
+<script>
+/* Enseignant / Personnel administratif : le champ Filière disparaît */
+(function () {
+  var niveau = document.getElementById('student-level');
+  var filiere = document.getElementById('student-filiere');
+  var bloc = document.getElementById('field-filiere');
+  var form = document.getElementById('info-form');
+  if (!niveau || !filiere || !bloc) return;
+function majFiliere() {
+    var estStaff = niveau.value === 'Enseignant' || niveau.value === 'Personnel administratif';
+    bloc.style.display = estStaff ? 'none' : '';
+    if (estStaff) {
+      filiere.value = '';
+      bloc.classList.remove('invalid');
+    }
+  }
+niveau.addEventListener('change', majFiliere);
+  if (form) form.addEventListener('reset', function () { setTimeout(majFiliere, 0); });
+  majFiliere();
+})();
+</script>
 </body>
 </html>
